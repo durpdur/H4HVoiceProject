@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import FunctionInterface from './components/FunctionInterface/FunctionInterface'
 import type { FunctionDescriptor } from './types/FunctionDescriptor'
 import { Button } from '@mui/material'
+import VoiceBubble from './components/FunctionInterface/VoiceBubble'
 
 function App() {
   const [functions, setFunctions] = useState<FunctionDescriptor[]>([])
+  const [isRecording, setIsRecording] = useState<boolean>(false);
 
   // Adds two mockFunctions to function state
   useEffect(() => {
@@ -39,6 +41,41 @@ function App() {
     setFunctions([mockFunction, mockFunction2])
   }, [])
 
+  // Spacebar listener
+  useEffect(() => {
+    const isTypingTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      if (!el) return false;
+
+      // any normal form field
+      const tag = el.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea" || tag === "select") return true;
+
+      // contenteditable divs (rich text editors)
+      if (el.isContentEditable) return true;
+
+      // in case the event target is inside an input wrapper
+      if (el.closest?.("input, textarea, select, [contenteditable='true']"))
+        return true;
+
+      return false;
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code !== "Space") return;
+      if (isTypingTarget(e.target)) return; // ✅ don't toggle while typing
+
+      e.preventDefault(); // stop page scroll
+      setIsRecording((prev) => !prev);
+    };
+
+    window.addEventListener("keydown", handleKeyDown, { passive: false });
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   // FUNCTION
   // Updates the function state
   const updateFunction = (index: number, updated: FunctionDescriptor) => {
@@ -52,6 +89,11 @@ function App() {
 
   return (
     <div style={{ padding: 16 }}>
+      <VoiceBubble
+        isRecording={isRecording}
+        onToggle={() => setIsRecording(prev => !prev)}
+      />
+
       {functions.map((func, idx) => (
         <FunctionInterface
           key={func.function_id}

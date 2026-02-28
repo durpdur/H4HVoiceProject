@@ -1,0 +1,98 @@
+.wrapper {
+  position: relative;
+  height: 200px;
+  width: 200px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #0f172a;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.wrapper:active {
+  transform: scale(0.96);
+}
+
+/* ✨ Glowing ring */
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Flowing pulse animation */
+.activeRing {
+  animation: pulse 2s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow:
+      0 0 0 0 rgba(99, 102, 241, 0.6),
+      0 0 0 0 rgba(0, 245, 255, 0.4);
+  }
+  70% {
+    box-shadow:
+      0 0 0 25px rgba(99, 102, 241, 0),
+      0 0 0 40px rgba(0, 245, 255, 0);
+  }
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(99, 102, 241, 0),
+      0 0 0 0 rgba(0, 245, 255, 0);
+  }
+}
+
+/* Voice bars */
+.voice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  z-index: 2;
+}
+
+.bar {
+  width: 7px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #00f5ff, #6366f1);
+  transform: scaleY(0.6);
+  opacity: 0.6;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.active .bar {
+  animation: speak 1.1s ease-in-out infinite;
+  opacity: 1;
+}
+
+.active .bar:nth-child(1) {
+  animation-delay: 0s;
+}
+.active .bar:nth-child(2) {
+  animation-delay: 0.12s;
+}
+.active .bar:nth-child(3) {
+  animation-delay: 0.24s;
+}
+.active .bar:nth-child(4) {
+  animation-delay: 0.36s;
+}
+.active .bar:nth-child(5) {
+  animation-delay: 0.48s;
+}
+
+@keyframes speak {
+  0%,
+  100% {
+    transform: scaleY(0.5);
+  }
+  50% {
+    transform: scaleY(2.1);
+  }
+}
