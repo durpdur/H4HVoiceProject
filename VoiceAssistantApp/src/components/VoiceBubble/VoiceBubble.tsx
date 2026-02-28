@@ -5,7 +5,7 @@ type VoiceBubbleProps = {
     onToggle: () => void;
 };
 
-export default function VoiceBubble({ isRecording }: VoiceBubbleProps) {
+export default function VoiceBubble({ isRecording, onToggle }: VoiceBubbleProps) {
     return (
         <div className={styles.wrapper}>
             {/* Pulse ring */}

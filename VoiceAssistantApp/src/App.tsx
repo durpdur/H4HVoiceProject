@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import FunctionInterface from './components/FunctionInterface/FunctionInterface'
 import type { FunctionDescriptor } from './types/FunctionDescriptor'
-import { Button } from '@mui/material'
-import VoiceBubble from './components/FunctionInterface/VoiceBubble'
+import { Button, Stack } from '@mui/material'
 import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEncode";
+import Transcriber from './components/Transcriber/Transcriber'
 
 
 function App() {
   const [functions, setFunctions] = useState<FunctionDescriptor[]>([])
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [text, setText] = useState("");
+  const [displayText, setDisplayText] = useState("");
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -22,7 +22,7 @@ function App() {
   // -- Audio Helpers ----------------------------
   async function startRecording() {
     if (isRecording) return;
-    setText("");
+    setDisplayText("");
     chunksRef.current = [];
 
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -90,7 +90,7 @@ function App() {
 
     // call Electron
     const result = await window.stt.transcribeWav(wav);
-    setText(result.text || "");
+    setDisplayText(result.text || "");
   }
 
   // Adds two mockFunctions to function state
@@ -166,21 +166,44 @@ function App() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <VoiceBubble
-        isRecording={isRecording}
-        onToggle={() => setIsRecording(prev => !prev)}
-      />
+    <div style={{ height: "100vh", padding: 16 }}>
+      <Stack direction="row" spacing={2} sx={{ height: "100%" }}>
+        {/* LEFT — Voice + Button */}
+        <Stack
+          spacing={2}
+          sx={{
+            width: 300,
+            flexShrink: 0,
+            alignItems: "center",
+          }}
+        >
+          <Transcriber
+            isRecording={isRecording}
+            onToggle={() => setIsRecording((prev) => !prev)}
+            displayText={displayText}
+          />
+          <Button fullWidth onClick={printFunction}>
+            Check State
+          </Button>
+        </Stack>
 
-      {functions.map((func, idx) => (
-        <FunctionInterface
-          key={func.function_id}
-          functionData={func}
-          onChange={(updated) => updateFunction(idx, updated)}
-        />
-      ))}
-
-      <Button onClick={printFunction}>Check State</Button>
+        {/* RIGHT — Functions (Scrollable) */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            paddingRight: 8,
+          }}
+        >
+          {functions.map((func, idx) => (
+            <FunctionInterface
+              key={func.function_id}
+              functionData={func}
+              onChange={(updated) => updateFunction(idx, updated)}
+            />
+          ))}
+        </div>
+      </Stack>
     </div>
   )
 }
