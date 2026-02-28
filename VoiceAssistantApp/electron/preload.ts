@@ -1,5 +1,10 @@
 import { ipcRenderer, contextBridge } from 'electron'
 
+// --------- Speech to Text API ---------
+contextBridge.exposeInMainWorld("stt", {
+  transcribeWav: (wavBytes: ArrayBuffer) => ipcRenderer.invoke("stt:transcribeWav", wavBytes),
+});
+
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
   on(...args: Parameters<typeof ipcRenderer.on>) {

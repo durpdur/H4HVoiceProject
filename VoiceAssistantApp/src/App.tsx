@@ -1,12 +1,97 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import FunctionInterface from './components/FunctionInterface/FunctionInterface'
 import type { FunctionDescriptor } from './types/FunctionDescriptor'
 import { Button } from '@mui/material'
 import VoiceBubble from './components/FunctionInterface/VoiceBubble'
+import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEncode";
+
 
 function App() {
   const [functions, setFunctions] = useState<FunctionDescriptor[]>([])
   const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [text, setText] = useState("");
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+  const sourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const chunksRef = useRef<Float32Array[]>([]);
+  const inputSampleRateRef = useRef<number>(48000);
+
+  // -- Audio Helpers ----------------------------
+  async function startRecording() {
+    if (isRecording) return;
+    setText("");
+    chunksRef.current = [];
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1,
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+    streamRef.current = stream;
+
+    const audioCtx = new AudioContext();
+    audioCtxRef.current = audioCtx;
+    inputSampleRateRef.current = audioCtx.sampleRate;
+
+    // IMPORTANT: make sure Vite serves this worklet file
+    // Easiest: import it as URL:
+    const workletUrl = new URL("./audio/pcm-worklet.ts", import.meta.url);
+    await audioCtx.audioWorklet.addModule(workletUrl);
+
+    const source = audioCtx.createMediaStreamSource(stream);
+    sourceRef.current = source;
+
+    const node = new AudioWorkletNode(audioCtx, "pcm-processor");
+    workletNodeRef.current = node;
+
+    node.port.onmessage = (e) => {
+      const buf = e.data as Float32Array;
+      chunksRef.current.push(buf);
+    };
+
+    // connect (don’t connect to destination if you don’t want monitoring)
+    source.connect(node);
+
+    setIsRecording(true);
+  }
+
+  async function stopRecording() {
+    if (!isRecording) return;
+    setIsRecording(false);
+
+    // stop audio graph
+    workletNodeRef.current?.disconnect();
+    sourceRef.current?.disconnect();
+    await audioCtxRef.current?.close();
+
+    // stop mic
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+
+    // concat chunks
+    const chunks = chunksRef.current;
+    const total = chunks.reduce((sum, c) => sum + c.length, 0);
+    const merged = new Float32Array(total);
+    let offset = 0;
+    for (const c of chunks) {
+      merged.set(c, offset);
+      offset += c.length;
+    }
+
+    // resample -> int16 -> wav
+    const resampled = resampleTo16k(merged, inputSampleRateRef.current);
+    const pcm16 = floatTo16BitPCM(resampled);
+    const wav = encodeWav16kMono(pcm16);
+
+    // call Electron
+    const result = await window.stt.transcribeWav(wav);
+    setText(result.text || "");
+  }
 
   // Adds two mockFunctions to function state
   useEffect(() => {
@@ -41,40 +126,33 @@ function App() {
     setFunctions([mockFunction, mockFunction2])
   }, [])
 
-  // Spacebar listener
+  // "N" key listener
   useEffect(() => {
-    const isTypingTarget = (target: EventTarget | null) => {
-      const el = target as HTMLElement | null;
-      if (!el) return false;
+    const down = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === "input" || tag === "textarea") return;
 
-      // any normal form field
-      const tag = el.tagName?.toLowerCase();
-      if (tag === "input" || tag === "textarea" || tag === "select") return true;
-
-      // contenteditable divs (rich text editors)
-      if (el.isContentEditable) return true;
-
-      // in case the event target is inside an input wrapper
-      if (el.closest?.("input, textarea, select, [contenteditable='true']"))
-        return true;
-
-      return false;
+      if (e.code === "KeyN") {
+        e.preventDefault();
+        startRecording();
+      }
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.code === "KeyN") {
+        e.preventDefault();
+        stopRecording();
+      }
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== "Space") return;
-      if (isTypingTarget(e.target)) return; // ✅ don't toggle while typing
-
-      e.preventDefault(); // stop page scroll
-      setIsRecording((prev) => !prev);
-    };
-
-    window.addEventListener("keydown", handleKeyDown, { passive: false });
-
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
     };
-  }, []);
+  }, [isRecording]);
+
 
   // FUNCTION
   // Updates the function state
