@@ -279,7 +279,7 @@ function App() {
           <Box
             ref={rightScrollRef}
             sx={{
-              height: "100%",
+              height: "90%",
               overflowY: "auto",
               p: 2,
               minWidth: 0,
