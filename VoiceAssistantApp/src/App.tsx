@@ -17,6 +17,7 @@ function App() {
   const [isThinking, setIsThinking] = useState<boolean>(false);
   const [generatedFunction, setGeneratedFunction] = useState<GenerateResult | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [searchMs, setSearchMs] = useState<number | null>(null)
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -102,14 +103,21 @@ function App() {
 
     if (text) {
       setIsThinking(true);
+      setSearchMs(null);
       try {
+        const t0 = performance.now()
         const search = await window.chromaAPI.searchFunctions(text);
+        const t1 = performance.now()
+
         setSearchResponse(search);
+
+        setSearchMs(Math.round(t1 - t0))
       } finally {
         setIsThinking(false);
       }
     } else {
       setSearchResponse(null);
+      setSearchMs(null)
     }
   }
 
@@ -162,9 +170,7 @@ function App() {
     await window.chromaAPI.upsertFunction(fd)
     await refreshFunctions()
   }
-  //---------------------------------------------
-
-  // "N" key listener
+  //- "N" key listener --------------------------------------------
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.repeat) return;
@@ -220,6 +226,7 @@ function App() {
             setGeneratedFunction={setGeneratedFunction}
             isGenerating={isGenerating}
             onGenerate={handleGenerate}
+            searchMs={searchMs}
           />
         </Stack>
 

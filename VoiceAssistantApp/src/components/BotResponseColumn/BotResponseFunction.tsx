@@ -11,9 +11,10 @@ type BotResponseFunctionProps = {
     >;
     isGenerating?: boolean;
     onGenerate: () => Promise<void>
+    searchMs?: number | null
 };
 
-function BotResponseFunction({ searchResponse, generatedFunction, setGeneratedFunction, isGenerating, onGenerate }: BotResponseFunctionProps) {
+function BotResponseFunction({ searchResponse, generatedFunction, setGeneratedFunction, isGenerating, onGenerate, searchMs }: BotResponseFunctionProps) {
     const results = searchResponse?.results ?? [];
     const matched = searchResponse?.matched ?? false;
 
@@ -71,16 +72,33 @@ function BotResponseFunction({ searchResponse, generatedFunction, setGeneratedFu
 
     return (
         <Box>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
-                    Function Match:
-                </Typography>
-                <Chip
-                    size="small"
-                    label={matched ? "Matched" : "Not Matched"}
-                    color={matched ? "secondary" : "default"}
-                    variant={matched ? "filled" : "outlined"}
-                />
+            <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Stack direction="row" justifyContent="left" spacing={1}>
+                    <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                        Function Match:
+                    </Typography>
+                    <Chip
+                        size="small"
+                        label={matched ? "Matched" : "Not Matched"}
+                        color={matched ? "secondary" : "default"}
+                        variant={matched ? "filled" : "outlined"}
+                    />
+                </Stack>
+                {typeof searchMs === "number" && (
+                    <Chip
+                        size="small"
+                        label={`${searchMs} ms`}
+                        variant="outlined"
+                        sx={{
+                            fontFamily: "monospace",
+                            fontWeight: 500,
+                            borderRadius: "999px",
+                            bgcolor: "grey.100",
+                            color: "text.secondary",
+                            borderColor: "divider",
+                        }}
+                    />
+                )}
             </Stack>
 
             <Stack spacing={1}>
@@ -123,7 +141,7 @@ function BotResponseFunction({ searchResponse, generatedFunction, setGeneratedFu
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: "text.secondary" }}>
                                     {typeof r.confidence === "number"
-                                        ? `Confidence: ${r.confidence.toFixed(3)}`
+                                        ? `Confidence: ${Math.round(r.confidence)}%`
                                         : "Confidence: —"}
                                 </Typography>
                             </Stack>

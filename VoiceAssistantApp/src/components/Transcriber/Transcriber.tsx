@@ -16,9 +16,10 @@ type TranscriberProps = {
     >;
     isGenerating: boolean;
     onGenerate: () => Promise<void>
+    searchMs?: number | null
 };
 
-function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThinking, generatedFunction, setGeneratedFunction, isGenerating, onGenerate }: TranscriberProps) {
+function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThinking, generatedFunction, setGeneratedFunction, isGenerating, onGenerate, searchMs }: TranscriberProps) {
     return (
         <Box
             sx={{
@@ -96,6 +97,7 @@ function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThi
                 setGeneratedFunction={setGeneratedFunction}
                 isGenerating={isGenerating}
                 onGenerate={onGenerate}
+                searchMs={searchMs}
             />
         </Box>
     );

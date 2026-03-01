@@ -13,9 +13,10 @@ type BotResponseColumnProps = {
     >;
     isGenerating: boolean;
     onGenerate: () => Promise<void>
+    searchMs?: number | null
 };
 
-function BotResponseColumn({ isThinking = false, searchResponse, generatedFunction, setGeneratedFunction, isGenerating, onGenerate }: BotResponseColumnProps) {
+function BotResponseColumn({ isThinking = false, searchResponse, generatedFunction, setGeneratedFunction, isGenerating, onGenerate, searchMs }: BotResponseColumnProps) {
     return (
         <Paper
             elevation={0}
@@ -56,6 +57,7 @@ function BotResponseColumn({ isThinking = false, searchResponse, generatedFuncti
                     setGeneratedFunction={setGeneratedFunction}
                     isGenerating={isGenerating}
                     onGenerate={onGenerate}
+                    searchMs={searchMs}
                 />
                 <BotResponseResponsePhrase
                     isThinking={isThinking}

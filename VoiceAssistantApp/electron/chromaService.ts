@@ -115,7 +115,7 @@ export async function searchFunctions(
             const midpoint = 0.85   // distance where confidence ≈ 0.5
             const sharpness = 6     // higher = steeper drop
             const confidence =
-                1 / (1 + Math.exp(sharpness * (distance - midpoint)))
+                (1 / (1 + Math.exp(sharpness * (distance - midpoint)))) * 100
 
             return {
                 fd: fromChroma(r.id, r.doc, r.md),
