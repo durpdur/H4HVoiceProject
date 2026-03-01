@@ -1,3 +1,4 @@
+import { SearchResponse } from "../../types/SearchResponse";
 import BotResponseColumn from "../BotResponseColumn/BotResponseColumn";
 import VoiceBubble from "../VoiceBubble/VoiceBubble";
 import { Box, Paper, Typography, Fade } from "@mui/material";
@@ -6,9 +7,11 @@ type TranscriberProps = {
     isRecording: boolean;
     onToggle: () => void;
     displayText: string;
+    searchResponse: SearchResponse | null;
+    isThinking: boolean;
 };
 
-function Transcriber({ isRecording, onToggle, displayText }: TranscriberProps) {
+function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThinking }: TranscriberProps) {
     return (
         <Box
             sx={{
@@ -79,7 +82,10 @@ function Transcriber({ isRecording, onToggle, displayText }: TranscriberProps) {
                 </Box>
             </Paper>
 
-            <BotResponseColumn />
+            <BotResponseColumn
+                isThinking={isThinking}
+                searchResponse={searchResponse}
+            />
         </Box>
     );
 }

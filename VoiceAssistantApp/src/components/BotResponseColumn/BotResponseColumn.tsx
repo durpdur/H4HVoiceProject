@@ -1,14 +1,14 @@
-import { Box, Paper, Typography, Fade } from "@mui/material";
+import { Box, Paper, Typography } from "@mui/material";
+import { SearchResponse } from "../../types/SearchResponse";
+import BotResponseFunction from "./BotResponseFunction";
+import BotResponseResponsePhrase from "./BotResponsePhrase";
 
 type BotResponseColumnProps = {
-    responseText?: string;
-    isThinking?: boolean;
+    isThinking: boolean;
+    searchResponse: SearchResponse | null;
 };
 
-function BotResponseColumn({
-    responseText,
-    isThinking = false,
-}: BotResponseColumnProps) {
+function BotResponseColumn({ isThinking = false, searchResponse }: BotResponseColumnProps) {
     return (
         <Paper
             elevation={0}
@@ -42,40 +42,12 @@ function BotResponseColumn({
                 Assistant Response
             </Typography>
 
-            <Box sx={{ mt: 1, flexGrow: 1 }}>
-                {responseText ? (
-                    <Typography
-                        variant="body1"
-                        sx={{
-                            lineHeight: 1.7,
-                            color: "text.primary",
-                        }}
-                    >
-                        {responseText}
-                    </Typography>
-                ) : (
-                    <Fade in={!responseText} timeout={500}>
-                        <Typography
-                            variant="body1"
-                            sx={{
-                                fontStyle: "italic",
-                                color: "grey",
-                                animation: isThinking
-                                    ? "pulse 1.8s infinite"
-                                    : "none",
-                                "@keyframes pulse": {
-                                    "0%": { opacity: 1 },
-                                    "50%": { opacity: 0.4 },
-                                    "100%": { opacity: 1 },
-                                },
-                            }}
-                        >
-                            {isThinking
-                                ? "Thinking..."
-                                : "The assistant's response will appear here."}
-                        </Typography>
-                    </Fade>
-                )}
+            <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2, flexGrow: 1 }}>
+                <BotResponseFunction searchResponse={searchResponse} />
+                <BotResponseResponsePhrase
+                    isThinking={isThinking}
+                    responseText={searchResponse?.results[0]?.fd?.response_phrase ?? ""}
+                />
             </Box>
         </Paper>
     );

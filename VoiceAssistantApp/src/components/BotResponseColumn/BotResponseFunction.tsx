@@ -1,0 +1,104 @@
+import { Box, Chip, Stack, Typography } from "@mui/material";
+import { SearchResponse } from "../../types/SearchResponse";
+
+type BotResponseFunctionProps = {
+    searchResponse: SearchResponse | null;
+};
+
+function BotResponseFunction({ searchResponse }: BotResponseFunctionProps) {
+    const results = searchResponse?.results ?? [];
+    const matched = searchResponse?.matched ?? false;
+
+    if (!searchResponse) {
+        return (
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 1 }}>
+                    Function Match:
+                </Typography>
+                <Typography variant="body2" sx={{ color: "grey.600", fontStyle: "italic" }}>
+                    No search yet.
+                </Typography>
+            </Box>
+        );
+    }
+
+    if (!results.length) {
+        return (
+            <Box>
+                <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 1 }}>
+                    Function Match:
+                </Typography>
+                <Typography variant="body2" sx={{ color: "grey.600", fontStyle: "italic" }}>
+                    {matched ? "Matched, but no results returned." : "No match found."}
+                </Typography>
+            </Box>
+        );
+    }
+
+    return (
+        <Box>
+            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                    Function Match:
+                </Typography>
+                <Chip
+                    size="small"
+                    label={matched ? "Matched" : "Not Matched"}
+                    color={matched ? "secondary" : "default"}
+                    variant={matched ? "filled" : "outlined"}
+                />
+            </Stack>
+
+            <Stack spacing={1}>
+                {results.slice(0, 3).map((r, idx) => {
+                    const isTop = idx === 0;
+
+                    return (
+                        <Box
+                            key={idx}
+                            sx={{
+                                px: 1.25,
+                                py: 0.5,
+                                borderRadius: 3,
+                                border: isTop ? "2px solid transparent" : "1px solid",
+                                borderColor: isTop ? undefined : "divider",
+                                background: isTop
+                                    ? `
+                                          linear-gradient(white, white) padding-box,
+                                          linear-gradient(
+                                            90deg,
+                                            #ff9aa2,
+                                            #ffb7b2,
+                                            #ffdac1,
+                                            #e2f0cb,
+                                            #b5ead7,
+                                            #c7ceea
+                                          ) border-box
+                                        `
+                                    : "background.default",
+                                transition: "all 0.05s ease",
+                            }}
+                        >
+                            <Stack
+                                direction="row"
+                                justifyContent="space-between"
+                                alignItems="center"
+                            >
+                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                                    {r.fd?.function_id ?? "Unnamed function"}
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                                    {typeof r.confidence === "number"
+                                        ? `Confidence: ${r.confidence.toFixed(3)}`
+                                        : "Confidence: —"}
+                                </Typography>
+                            </Stack>
+                        </Box>
+                    );
+                })}
+            </Stack>
+        </Box>
+    );
+}
+
+export default BotResponseFunction;

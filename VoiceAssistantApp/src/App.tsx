@@ -12,7 +12,7 @@ function App() {
   const [functions, setFunctions] = useState<FunctionDescriptor[]>([])
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [displayText, setDisplayText] = useState("");
-  const [searchResponse, setSearchResponse] = useState<SearchResponse[]>([]);
+  const [searchResponse, setSearchResponse] = useState<SearchResponse | null>(null);
   const [isThinking, setIsThinking] = useState<boolean>(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -94,7 +94,20 @@ function App() {
 
     // call Electron
     const result = await window.stt.transcribeWav(wav);
-    setDisplayText(result.text || "");
+    const text = (result.text || "").trim();
+    setDisplayText(text);
+
+    if (text) {
+      setIsThinking(true);
+      try {
+        const search = await window.chromaAPI.searchFunctions(text);
+        setSearchResponse(search);
+      } finally {
+        setIsThinking(false);
+      }
+    } else {
+      setSearchResponse(null);
+    }
   }
 
   // -- ChromaDB listFunctions ----------------------------
@@ -175,6 +188,8 @@ function App() {
             isRecording={isRecording}
             onToggle={() => setIsRecording((prev) => !prev)}
             displayText={displayText}
+            searchResponse={searchResponse}
+            isThinking={isThinking}
           />
         </Stack>
 
