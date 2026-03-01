@@ -16,7 +16,7 @@ function BotResponseColumn({
                 mt: 3,
                 p: 3,
                 width: "100%",
-                minHeight: 140,
+                flex: 0.9,
                 borderRadius: 4,
                 border: "1px solid",
                 borderColor: isThinking ? "secondary.light" : "divider",

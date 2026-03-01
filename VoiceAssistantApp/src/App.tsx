@@ -5,12 +5,15 @@ import { Stack } from '@mui/material'
 import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEncode";
 import Transcriber from './components/Transcriber/Transcriber'
 import FunctionInterfaceColumn from './components/FunctionInterfaceColumn/FunctionInterfaceColumn';
+import { SearchResponse } from './types/SearchResponse';
 
 
 function App() {
   const [functions, setFunctions] = useState<FunctionDescriptor[]>([])
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [displayText, setDisplayText] = useState("");
+  const [searchResponse, setSearchResponse] = useState<SearchResponse[]>([]);
+  const [isThinking, setIsThinking] = useState<boolean>(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);

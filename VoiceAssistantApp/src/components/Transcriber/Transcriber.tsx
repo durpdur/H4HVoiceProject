@@ -17,7 +17,9 @@ function Transcriber({ isRecording, onToggle, displayText }: TranscriberProps) {
                 alignItems: "center",
                 width: "90%",
                 maxWidth: 500,
-                mx: "auto"
+                mx: "auto",
+                minHeight: "100vh",
+                justifyContent: "left",
             }}
         >
             <VoiceBubble isRecording={isRecording} onToggle={onToggle} />
@@ -47,7 +49,7 @@ function Transcriber({ isRecording, onToggle, displayText }: TranscriberProps) {
                         letterSpacing: 1.2
                     }}
                 >
-                    {isRecording ? "Live Transcript" : "Voice Input"}
+                    {isRecording ? "Live Transcript" : "Voice Query"}
                 </Typography>
 
                 <Box sx={{ mt: 1 }}>
