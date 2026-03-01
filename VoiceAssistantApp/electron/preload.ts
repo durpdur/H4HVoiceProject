@@ -1,4 +1,5 @@
 import { ipcRenderer, contextBridge } from 'electron'
+import type { FunctionDescriptor } from '../src/types/FunctionDescriptor';
 
 // --------- Speech to Text API ---------
 contextBridge.exposeInMainWorld("stt", {
@@ -27,21 +28,39 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 
 // --------- ChromaDB API for the Renderer process ---------
 contextBridge.exposeInMainWorld('chromaAPI', {
-  addCommand: (id: string, description: string, regexPhrases: string[]) =>
-    ipcRenderer.invoke('chroma:addCommand', id, description, regexPhrases),
+  // Create / Update (stores all fields, embeds only function_desc)
+  upsertFunction: (fd: FunctionDescriptor): Promise<void> =>
+    ipcRenderer.invoke('chroma:upsertFunction', fd),
 
-  queryCommands: (text: string, nResults?: number, distanceThreshold?: number) =>
-    ipcRenderer.invoke('chroma:queryCommands', text, nResults, distanceThreshold),
+  // Read one
+  getFunction: (id: string): Promise<FunctionDescriptor | null> =>
+    ipcRenderer.invoke('chroma:getFunction', id),
 
-  getCommand: (id: string) =>
-    ipcRenderer.invoke('chroma:getCommand', id),
+  // Read all
+  listFunctions: (): Promise<FunctionDescriptor[]> =>
+    ipcRenderer.invoke('chroma:listFunctions'),
 
-  deleteCommand: (id: string) =>
-    ipcRenderer.invoke('chroma:deleteCommand', id),
+  // Delete
+  deleteFunction: (id: string): Promise<void> =>
+    ipcRenderer.invoke('chroma:deleteFunction', id),
 
-  getAllCommands: () =>
-    ipcRenderer.invoke('chroma:getAllCommands'),
+  // Vector search
+  searchFunctions: (
+    text: string,
+    nResults?: number,
+    distanceThreshold?: number
+  ): Promise<{
+    matched: boolean
+    results: Array<{ fd: FunctionDescriptor; distance: number }>
+  }> => ipcRenderer.invoke('chroma:searchFunctions', text, nResults, distanceThreshold),
 
-  generateAndStore: (text: string, nResults?: number, distanceThreshold?: number) =>
-    ipcRenderer.invoke('chroma:generateAndStore', text, nResults, distanceThreshold),
+  // “Generate if missing” flow
+  generateAndStore: (
+    text: string,
+    nResults?: number,
+    distanceThreshold?: number
+  ): Promise<
+    | { generated: false; matched: true; results: Array<{ fd: FunctionDescriptor; distance: number }> }
+    | { generated: true; descriptor: FunctionDescriptor }
+  > => ipcRenderer.invoke('chroma:generateAndStore', text, nResults, distanceThreshold),
 })

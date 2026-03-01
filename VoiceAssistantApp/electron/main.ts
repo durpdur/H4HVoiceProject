@@ -4,12 +4,13 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import {
+  FunctionDescriptor,
   initChroma,
-  addCommand,
-  queryCommands,
-  getCommand,
-  deleteCommand,
-  getAllCommands,
+  upsertFunction,
+  getFunction,
+  deleteFunction,
+  listFunctions,
+  searchFunctions
 } from './chromaService'
 import { generateFunction } from './llmService'
 
@@ -182,40 +183,38 @@ ipcMain.handle("stt:transcribeWav", async (_event, wavBytes: ArrayBuffer) => {
 });
 
 // ── ChromaDB IPC Handlers ──────────────────────────────────────────────
-ipcMain.handle('chroma:addCommand', async (_e, id: string, description: string, regexPhrases: string[]) => {
-  return addCommand(id, description, regexPhrases)
+ipcMain.handle('chroma:upsertFunction', async (_e, fd: FunctionDescriptor) => {
+  return upsertFunction(fd)
 })
 
-ipcMain.handle('chroma:queryCommands', async (_e, text: string, nResults?: number, distanceThreshold?: number) => {
-  return queryCommands(text, nResults, distanceThreshold)
+ipcMain.handle('chroma:getFunction', async (_e, id: string) => {
+  return getFunction(id) // returns FunctionDescriptor | null
 })
 
-ipcMain.handle('chroma:getCommand', async (_e, id: string) => {
-  return getCommand(id)
+ipcMain.handle('chroma:deleteFunction', async (_e, id: string) => {
+  return deleteFunction(id)
 })
 
-ipcMain.handle('chroma:deleteCommand', async (_e, id: string) => {
-  return deleteCommand(id)
+ipcMain.handle('chroma:listFunctions', async () => {
+  return listFunctions() // returns FunctionDescriptor[]
 })
 
-ipcMain.handle('chroma:getAllCommands', async () => {
-  return getAllCommands()
+ipcMain.handle('chroma:searchFunctions', async (_e, text: string, nResults?: number, distanceThreshold?: number) => {
+  return searchFunctions(text, nResults, distanceThreshold)
 })
 
 ipcMain.handle('chroma:generateAndStore', async (_e, text: string, nResults?: number, distanceThreshold?: number) => {
-  // 1. Check if something close already exists
-  const queryResult = await queryCommands(text, nResults, distanceThreshold)
+  const queryResult = await searchFunctions(text, nResults, distanceThreshold)
   if (queryResult.matched) {
     return { generated: false, ...queryResult }
   }
 
-  // 2. Nothing close — ask the LLM to generate a function
-  const descriptor = await generateFunction(text)
+  const descriptor: FunctionDescriptor = await generateFunction(text)
 
-  // 3. Store it in ChromaDB so future queries match
-  await addCommand(descriptor.function_id, descriptor.function_desc, descriptor.regex_phrases)
+  // ✅ store the full descriptor (desc embedded; rest metadata)
+  await upsertFunction(descriptor)
+
   console.log(`[main] Generated and stored new function "${descriptor.function_id}"`)
-
   return { generated: true, descriptor }
 })
 

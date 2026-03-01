@@ -1,9 +1,11 @@
+import type { FunctionDescriptor } from './types/FunctionDescriptor'
+
 import { useState, useEffect, useRef } from 'react'
 import FunctionInterface from './components/FunctionInterface/FunctionInterface'
-import type { FunctionDescriptor } from './types/FunctionDescriptor'
 import { Button, Stack } from '@mui/material'
 import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEncode";
 import Transcriber from './components/Transcriber/Transcriber'
+import FunctionInterfaceColumn from './components/FunctionInterfaceColumn/FunctionInterfaceColumn';
 
 
 function App() {
@@ -93,38 +95,49 @@ function App() {
     setDisplayText(result.text || "");
   }
 
-  // Adds two mockFunctions to function state
+  // -- ChromaDB listFunctions ----------------------------
+  const refreshFunctions = async () => {
+    const stored = await window.chromaAPI.listFunctions()
+    setFunctions(stored)
+  }
+
   useEffect(() => {
-    const mockFunction: FunctionDescriptor = {
+    let cancelled = false
+
+      ; (async () => {
+        try {
+          const stored = await window.chromaAPI.listFunctions()
+          if (!cancelled) setFunctions(stored)
+        } catch (err) {
+          console.error("Failed to load functions from Chroma:", err)
+          if (!cancelled) setFunctions([])
+        }
+      })()
+
+    return () => { cancelled = true }
+  }, [])
+
+  // Add mock data
+  const addKettle = async () => {
+    const fd: FunctionDescriptor = {
       function_id: "kettle_on_001",
       function_desc: "Turns on the smart kettle, optionally for a specified duration in minutes.",
-      regex_phrases: [
-        "turn on (the )?kettle",
-        "start (the )?kettle",
-        "boil water"
-      ],
-      logic:
-        "if (slots.duration) { device.kettle.turn_on({ duration: slots.duration }); } else { device.kettle.turn_on(); }",
+      regex_phrases: ["turn on (the )?kettle", "start (the )?kettle", "boil water"],
+      logic: "if (slots.duration) { device.kettle.turn_on({ duration: slots.duration }); } else { device.kettle.turn_on(); }",
       response_phrase: "Kettle has been turned on",
       slots: { duration: "(\\d+)\\s+minutes" },
-      metadata: { confidence_score: 0.95, usage_count: 12 },
-    }
-    const mockFunction2: FunctionDescriptor = {
-      function_id: "kettle_off_001",
-      function_desc: "Turns off the smart kettle immediately or cancels a scheduled heating cycle.",
-      regex_phrases: [
-        "turn off (the )?kettle",
-        "stop (the )?kettle",
-        "cancel (the )?kettle"
-      ],
-      logic: "device.kettle.turn_off();",
-      response_phrase: "Kettle has been turned off",
-      slots: {},
-      metadata: { confidence_score: 0.93, usage_count: 7 },
+      metadata: { confidence_score: 0.95, usage_count: 0 },
     }
 
-    setFunctions([mockFunction, mockFunction2])
-  }, [])
+    await window.chromaAPI.upsertFunction(fd)
+    await refreshFunctions()
+  }
+
+  const createFunction = async (fd: FunctionDescriptor) => {
+    await window.chromaAPI.upsertFunction(fd)
+    await refreshFunctions()
+  }
+  //---------------------------------------------
 
   // "N" key listener
   useEffect(() => {
@@ -160,11 +173,6 @@ function App() {
     setFunctions(prev => prev.map((f, i) => (i === index ? updated : f)))
   }
 
-  // prints function
-  const printFunction = () => {
-    functions.map(func => console.log(func.response_phrase));
-  }
-
   return (
     <div style={{ height: "100vh", padding: 16 }}>
       <Stack direction="row" spacing={2} sx={{ height: "100%" }}>
@@ -182,27 +190,17 @@ function App() {
             onToggle={() => setIsRecording((prev) => !prev)}
             displayText={displayText}
           />
-          <Button fullWidth onClick={printFunction}>
-            Check State
-          </Button>
         </Stack>
 
         {/* RIGHT — Functions (Scrollable) */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            paddingRight: 8,
-          }}
-        >
-          {functions.map((func, idx) => (
-            <FunctionInterface
-              key={func.function_id}
-              functionData={func}
-              onChange={(updated) => updateFunction(idx, updated)}
-            />
-          ))}
-        </div>
+        <FunctionInterfaceColumn
+          functions={functions}
+          onChangeFunction={updateFunction}
+          onCreateFunction={createFunction}
+          onAddKettle={addKettle}
+          onRefresh={refreshFunctions}
+        />
+
       </Stack>
     </div>
   )

@@ -1,46 +1,88 @@
-import { ChromaClient, Collection } from 'chromadb'
+import { ChromaClient, Collection } from "chromadb"
+
+export interface FunctionDescriptor {
+    function_id: string
+    function_desc: string
+    regex_phrases: string[]
+    logic: string
+    response_phrase: string
+    slots?: Record<string, string>
+    metadata: {
+        confidence_score: number
+        usage_count: number
+    }
+}
 
 let client: ChromaClient
 let collection: Collection
 
-/**
- * Initialise the ChromaDB client and get/create the voice_commands collection.
- * Call this once at app startup (after the Chroma server is running).
- */
 export async function initChroma(): Promise<void> {
-    client = new ChromaClient({ host: 'localhost', port: 8000 })
-    collection = await client.getOrCreateCollection({ name: 'voice_commands' })
-    console.log('[chroma] Connected — collection "voice_commands" ready')
+    client = new ChromaClient({ host: "localhost", port: 8000 })
+    collection = await client.getOrCreateCollection({ name: "voice_commands" })
 }
 
-/**
- * Add or update a command in the collection.
- * ChromaDB will generate embeddings from `description` automatically via the
- * default embedding function.
- */
-export async function addCommand(
-    id: string,
-    description: string,
-    regexPhrases: string[]
-): Promise<void> {
+function toChroma(fd: FunctionDescriptor) {
+    return {
+        id: fd.function_id,
+        document: fd.function_desc, // ✅ embedded
+        metadata: {
+            // store EVERYTHING else
+            regex_phrases: JSON.stringify(fd.regex_phrases),
+            logic: fd.logic,
+            response_phrase: fd.response_phrase,
+            slots: fd.slots ? JSON.stringify(fd.slots) : "",
+            confidence_score: fd.metadata.confidence_score,
+            usage_count: fd.metadata.usage_count,
+        },
+    }
+}
+
+function fromChroma(id: string, document: string, md: any): FunctionDescriptor {
+    return {
+        function_id: id,
+        function_desc: document,
+        regex_phrases: md?.regex_phrases ? JSON.parse(md.regex_phrases) : [],
+        logic: md?.logic ?? "",
+        response_phrase: md?.response_phrase ?? "",
+        slots: md?.slots ? (md.slots === "" ? undefined : JSON.parse(md.slots)) : undefined,
+        metadata: {
+            confidence_score: Number(md?.confidence_score ?? 0),
+            usage_count: Number(md?.usage_count ?? 0),
+        },
+    }
+}
+
+export async function upsertFunction(fd: FunctionDescriptor): Promise<void> {
+    const rec = toChroma(fd)
     await collection.upsert({
-        ids: [id],
-        documents: [description],
-        metadatas: [{ regex_phrases: JSON.stringify(regexPhrases) }],
+        ids: [rec.id],
+        documents: [rec.document],
+        metadatas: [rec.metadata],
     })
-    console.log(`[chroma] Upserted command "${id}"`)
 }
 
-/**
- * Query commands by natural-language text.
- * Returns the top `nResults` closest matches whose distance is within
- * `distanceThreshold`.  ChromaDB distances are L2 (lower = more similar).
- *
- * The returned object includes:
- *  - `matched` – true if at least one result was within the threshold
- *  - `results` – only the results that passed the threshold filter
- */
-export async function queryCommands(
+export async function getFunction(functionId: string): Promise<FunctionDescriptor | null> {
+    const res = await collection.get({ ids: [functionId], include: ["documents", "metadatas"] })
+    const id = res.ids?.[0]
+    if (!id) return null
+    const doc = res.documents?.[0] ?? ""
+    const md = res.metadatas?.[0] ?? {}
+    return fromChroma(id, doc, md)
+}
+
+export async function deleteFunction(functionId: string): Promise<void> {
+    await collection.delete({ ids: [functionId] })
+}
+
+export async function listFunctions(): Promise<FunctionDescriptor[]> {
+    const res = await collection.get({ include: ["documents", "metadatas"] })
+    const ids = res.ids ?? []
+    const docs = res.documents ?? []
+    const mds = res.metadatas ?? []
+    return ids.map((id, i) => fromChroma(id, docs[i] ?? "", mds[i] ?? {}))
+}
+
+export async function searchFunctions(
     text: string,
     nResults = 5,
     distanceThreshold = 0.75
@@ -48,56 +90,20 @@ export async function queryCommands(
     const raw = await collection.query({
         queryTexts: [text],
         nResults,
-        include: ['documents', 'metadatas', 'distances'],
+        include: ["documents", "metadatas", "distances"],
     })
 
-    // raw.distances is number[][] (one inner array per query text)
-    const distances = raw.distances?.[0] ?? []
     const ids = raw.ids?.[0] ?? []
-    const documents = raw.documents?.[0] ?? []
-    const metadatas = raw.metadatas?.[0] ?? []
+    const docs = raw.documents?.[0] ?? []
+    const mds = raw.metadatas?.[0] ?? []
+    const dists = raw.distances?.[0] ?? []
 
-    // Keep only results within the threshold
-    const filtered = ids
+    const results = ids
         .map((id, i) => ({
-            id,
-            document: documents[i],
-            metadata: metadatas[i],
-            distance: distances[i],
+            fd: fromChroma(id, docs[i] ?? "", mds[i] ?? {}),
+            distance: dists[i],
         }))
         .filter((r) => r.distance != null && r.distance <= distanceThreshold)
 
-    const matched = filtered.length > 0
-
-    console.log(
-        `[chroma] Query "${text}" → ${ids.length} raw hits, ${filtered.length} within threshold (${distanceThreshold})`
-    )
-
-    return { matched, results: filtered }
-}
-
-/**
- * Get a single command by its ID.
- */
-export async function getCommand(id: string) {
-    const results = await collection.get({
-        ids: [id],
-    })
-    return results
-}
-
-/**
- * Delete a command by its ID.
- */
-export async function deleteCommand(id: string): Promise<void> {
-    await collection.delete({ ids: [id] })
-    console.log(`[chroma] Deleted command "${id}"`)
-}
-
-/**
- * List every command in the collection.
- */
-export async function getAllCommands() {
-    const results = await collection.get()
-    return results
+    return { matched: results.length > 0, results }
 }

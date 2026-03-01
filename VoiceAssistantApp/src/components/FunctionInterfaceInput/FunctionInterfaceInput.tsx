@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
-import type { FunctionDescriptor } from "../../types/FunctionDescriptor";
-
+import { useState } from "react"
+import type { FunctionDescriptor } from "../../types/FunctionDescriptor"
 import {
     Box,
     Stack,
@@ -11,92 +10,127 @@ import {
     Chip,
     IconButton,
     Tooltip,
-    Button
-} from "@mui/material";
-
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
+    Button,
+} from "@mui/material"
+import AddIcon from "@mui/icons-material/Add"
+import DeleteIcon from "@mui/icons-material/Delete"
 
 type Props = {
-    functionData: FunctionDescriptor;
-    onChange: (updated: FunctionDescriptor) => void;
-};
+    onCreate: (fd: FunctionDescriptor) => Promise<void> | void
+}
 
-function FunctionInterface({ functionData, onChange }: Props) {
-    const [draft, setDraft] = useState<FunctionDescriptor>(functionData);
-    const slots: Record<string, string> = draft.slots ?? {};
+const emptyFunction = (): FunctionDescriptor => ({
+    function_id: "",
+    function_desc: "",
+    regex_phrases: [""],
+    logic: "",
+    response_phrase: "",
+    slots: {},
+    metadata: { confidence_score: 0.9, usage_count: 0 },
+})
 
-    // Keep draft in sync if parent changes (e.g., switching selection)
-    useMemo(() => {
-        setDraft(functionData);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [functionData]);
+export default function FunctionInterfaceInput({ onCreate }: Props) {
+    const [draft, setDraft] = useState<FunctionDescriptor>(emptyFunction())
+    const slots: Record<string, string> = draft.slots ?? {}
 
-    const commit = (next: FunctionDescriptor) => {
-        setDraft(next);
-        onChange(next);
-    };
-
-    // ---------- Basic field helpers ----------
     const setField = <K extends keyof FunctionDescriptor>(key: K, value: FunctionDescriptor[K]) => {
-        commit({ ...draft, [key]: value });
-    };
+        setDraft((prev) => ({ ...prev, [key]: value }))
+    }
 
-    // ---------- regex_phrases editor ----------
-    const addRegexPhrase = () => setField("regex_phrases", [...draft.regex_phrases, ""]);
+    // regex helpers
+    const addRegexPhrase = () => setField("regex_phrases", [...draft.regex_phrases, ""])
     const updateRegexPhrase = (i: number, value: string) => {
-        const next = [...draft.regex_phrases];
-        next[i] = value;
-        setField("regex_phrases", next);
-    };
+        const next = [...draft.regex_phrases]
+        next[i] = value
+        setField("regex_phrases", next)
+    }
     const removeRegexPhrase = (i: number) => {
-        const next = draft.regex_phrases.filter((_, idx) => idx !== i);
-        setField("regex_phrases", next);
-    };
+        const next = draft.regex_phrases.filter((_, idx) => idx !== i)
+        setField("regex_phrases", next.length ? next : [""])
+    }
 
-    // ---------- slots editor (Record<string, string>) ----------
+    // slots helpers
     const setSlotKeyValue = (key: string, value: string) => {
-        setField("slots", { ...draft.slots, [key]: value });
-    };
-
+        setField("slots", { ...(draft.slots ?? {}), [key]: value })
+    }
     const renameSlotKey = (oldKey: string, newKey: string) => {
-        if (!newKey) return;
-
-        const { [oldKey]: oldVal, ...rest } = slots;
-        setField("slots", { ...rest, [newKey]: oldVal ?? "" });
-    };
-
+        if (!newKey) return
+        const { [oldKey]: oldVal, ...rest } = slots
+        setField("slots", { ...rest, [newKey]: oldVal ?? "" })
+    }
     const removeSlotKey = (key: string) => {
-        const { [key]: _, ...rest } = slots;
-        setField("slots", rest);
-    };
-
+        const { [key]: _, ...rest } = slots
+        setField("slots", rest)
+    }
     const addSlot = () => {
-        let k = "slot";
-        let n = 1;
-        while ((k + n) in slots) n++;
-        setField("slots", { ...slots, [k + n]: "" });
-    };
+        let k = "slot"
+        let n = 1
+        while ((k + n) in slots) n++
+        setField("slots", { ...slots, [k + n]: "" })
+    }
 
-    const slotEntries = Object.entries(draft.slots ?? {});
+    const slotEntries = Object.entries(draft.slots ?? {})
+
+    const canSave =
+        draft.function_id.trim().length > 0
+        && draft.function_desc.trim().length > 0
+        && draft.logic.trim().length > 0
+        && draft.response_phrase.trim().length > 0
+
+    const handleSave = async () => {
+        if (!canSave) return
+        // optional cleanup: remove empty regex lines
+        const cleaned: FunctionDescriptor = {
+            ...draft,
+            regex_phrases: draft.regex_phrases.map((s) => s.trim()).filter(Boolean),
+        }
+        await onCreate(cleaned)
+        setDraft(emptyFunction())
+    }
+
+    const handleCancel = () => setDraft(emptyFunction())
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+        <Paper
+            sx={{
+                p: 2,
+                mb: 2,
+                borderRadius: 2,
+                border: "2px solid transparent",
+                background: `
+      linear-gradient(white, white) padding-box,
+      linear-gradient(
+        90deg,
+        #ff9aa2,
+        #ffb7b2,
+        #ffdac1,
+        #e2f0cb,
+        #b5ead7,
+        #c7ceea
+      ) border-box
+    `,
+            }}
+        >
             <Stack spacing={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Stack direction="row" justifyContent="left" alignItems="center">
-                        <Typography variant="h6" paddingRight={"0.5em"}>Function:</Typography>
-                        <Chip label={draft.function_id} size="small" />
-                    </Stack>
-
-                    <Chip label={"Saved"} size="small" color="primary" />
+                <Stack direction="row" justifyContent="left" alignItems="center">
+                    <Typography variant="h6" paddingRight={"0.5em"}>
+                        New Function:
+                    </Typography>
+                    <Chip label="Draft" size="small" color="success" variant="outlined" />
                 </Stack>
 
                 <Divider />
 
-                {/* function_desc */}
                 <TextField
-                    label="function_desc"
+                    label="function_id"
+                    value={draft.function_id}
+                    onChange={(e) => setField("function_id", e.target.value)}
+                    fullWidth
+                    placeholder="e.g. kettle_on_002"
+                />
+
+                <TextField
+                    label="function_desc (embedded)"
                     value={draft.function_desc}
                     onChange={(e) => setField("function_desc", e.target.value)}
                     fullWidth
@@ -104,7 +138,6 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     minRows={2}
                 />
 
-                {/* logic */}
                 <Box>
                     <Typography variant="subtitle1">logic</Typography>
                     <TextField
@@ -129,8 +162,6 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     />
                 </Box>
 
-
-                {/* regex_phrases */}
                 <Box>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                         <Typography variant="subtitle1">regex_phrases</Typography>
@@ -160,7 +191,6 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     </Stack>
                 </Box>
 
-                {/* slots */}
                 <Box>
                     <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                         <Typography variant="subtitle1">slots</Typography>
@@ -202,43 +232,6 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     )}
                 </Box>
 
-                {/* metadata */}
-                <Box sx={{ mt: 2 }}>
-                    <Stack
-                        direction="row"
-                        alignItems="center"
-                        spacing={1.5}
-                    >
-                        <Typography variant="subtitle1">
-                            Usage Count:
-                        </Typography>
-
-                        <Chip
-                            label={draft.metadata.usage_count}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                        />
-                    </Stack>
-                </Box>
-
-                <Stack direction="row" spacing={2} justifyContent="flex-start" sx={{ mt: 2 }}>
-                    <Button
-                        variant="contained"
-                        color="success"
-                    >
-                        Save
-                    </Button>
-
-                    <Button
-                        variant="outlined"
-                        color="warning"
-                    >
-                        Cancel
-                    </Button>
-                </Stack>
-
-                {/* response_phrase */}
                 <TextField
                     label="response_phrase"
                     value={draft.response_phrase}
@@ -248,9 +241,19 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     minRows={2}
                 />
 
-            </Stack>
-        </Paper >
-    );
-}
+                <Stack direction="row" spacing={2} justifyContent="flex-start">
+                    <Button variant="contained" color="success" disabled={!canSave} onClick={handleSave}>
+                        Save
+                    </Button>
+                    <Button variant="outlined" color="warning" onClick={handleCancel}>
+                        Cancel
+                    </Button>
+                </Stack>
 
-export default FunctionInterface;
+                <Typography variant="caption" sx={{ opacity: 0.7 }}>
+                    Only <b>function_desc</b> is embedded; everything else is stored as metadata.
+                </Typography>
+            </Stack>
+        </Paper>
+    )
+}
