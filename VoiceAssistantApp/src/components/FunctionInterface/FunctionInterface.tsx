@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import type { FunctionDescriptor } from "../../types/FunctionDescriptor";
+import { useEffect, useMemo, useState } from "react"
+import type { FunctionDescriptor } from "../../types/FunctionDescriptor"
 
 import {
     Box,
@@ -11,90 +11,141 @@ import {
     Chip,
     IconButton,
     Tooltip,
-    Button
-} from "@mui/material";
+    Button,
+} from "@mui/material"
 
-import AddIcon from "@mui/icons-material/Add";
-import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add"
+import DeleteIcon from "@mui/icons-material/Delete"
 
 type Props = {
-    functionData: FunctionDescriptor;
-    onChange: (updated: FunctionDescriptor) => void;
-};
+    functionData: FunctionDescriptor
+    onChange: (updated: FunctionDescriptor) => void // called after SAVE (and on cancel reset if you want)
+}
 
 function FunctionInterface({ functionData, onChange }: Props) {
-    const [draft, setDraft] = useState<FunctionDescriptor>(functionData);
-    const slots: Record<string, string> = draft.slots ?? {};
+    const [draft, setDraft] = useState<FunctionDescriptor>(functionData)
+    const [isSaving, setIsSaving] = useState(false)
+    const [saveError, setSaveError] = useState<string | null>(null)
 
-    // Keep draft in sync if parent changes (e.g., switching selection)
-    useMemo(() => {
-        setDraft(functionData);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [functionData]);
+    const slots: Record<string, string> = draft.slots ?? {}
 
-    const commit = (next: FunctionDescriptor) => {
-        setDraft(next);
-        onChange(next);
-    };
+    // Keep draft in sync if parent changes (e.g. after refresh/listFunctions)
+    useEffect(() => {
+        setDraft(functionData)
+        setSaveError(null)
+    }, [functionData])
+
+    // Detect unsaved changes
+    const isDirty = useMemo(() => {
+        return JSON.stringify(draft) !== JSON.stringify(functionData)
+    }, [draft, functionData])
 
     // ---------- Basic field helpers ----------
     const setField = <K extends keyof FunctionDescriptor>(key: K, value: FunctionDescriptor[K]) => {
-        commit({ ...draft, [key]: value });
-    };
+        setDraft((prev) => ({ ...prev, [key]: value }))
+    }
 
     // ---------- regex_phrases editor ----------
-    const addRegexPhrase = () => setField("regex_phrases", [...draft.regex_phrases, ""]);
+    const addRegexPhrase = () => setField("regex_phrases", [...draft.regex_phrases, ""])
     const updateRegexPhrase = (i: number, value: string) => {
-        const next = [...draft.regex_phrases];
-        next[i] = value;
-        setField("regex_phrases", next);
-    };
+        const next = [...draft.regex_phrases]
+        next[i] = value
+        setField("regex_phrases", next)
+    }
     const removeRegexPhrase = (i: number) => {
-        const next = draft.regex_phrases.filter((_, idx) => idx !== i);
-        setField("regex_phrases", next);
-    };
+        const next = draft.regex_phrases.filter((_, idx) => idx !== i)
+        setField("regex_phrases", next.length ? next : [""])
+    }
 
-    // ---------- slots editor (Record<string, string>) ----------
+    // ---------- slots editor ----------
     const setSlotKeyValue = (key: string, value: string) => {
-        setField("slots", { ...draft.slots, [key]: value });
-    };
+        setField("slots", { ...(draft.slots ?? {}), [key]: value })
+    }
 
     const renameSlotKey = (oldKey: string, newKey: string) => {
-        if (!newKey) return;
-
-        const { [oldKey]: oldVal, ...rest } = slots;
-        setField("slots", { ...rest, [newKey]: oldVal ?? "" });
-    };
+        if (!newKey) return
+        const { [oldKey]: oldVal, ...rest } = slots
+        setField("slots", { ...rest, [newKey]: oldVal ?? "" })
+    }
 
     const removeSlotKey = (key: string) => {
-        const { [key]: _, ...rest } = slots;
-        setField("slots", rest);
-    };
+        const { [key]: _, ...rest } = slots
+        setField("slots", rest)
+    }
 
     const addSlot = () => {
-        let k = "slot";
-        let n = 1;
-        while ((k + n) in slots) n++;
-        setField("slots", { ...slots, [k + n]: "" });
-    };
+        let k = "slot"
+        let n = 1
+        while ((k + n) in slots) n++
+        setField("slots", { ...slots, [k + n]: "" })
+    }
 
-    const slotEntries = Object.entries(draft.slots ?? {});
+    const slotEntries = Object.entries(draft.slots ?? {})
+
+    // ---------- Save / Cancel ----------
+    const handleSave = async () => {
+        setIsSaving(true)
+        setSaveError(null)
+
+        try {
+            // optional cleanup
+            const cleaned: FunctionDescriptor = {
+                ...draft,
+                function_id: draft.function_id.trim(),
+                function_desc: draft.function_desc.trim(),
+                regex_phrases: draft.regex_phrases.map((s) => s.trim()).filter(Boolean),
+                response_phrase: draft.response_phrase.trim(),
+                slots: draft.slots ?? {},
+            }
+
+            if (!cleaned.function_id || !cleaned.function_desc) {
+                throw new Error("function_id and function_desc are required")
+            }
+
+            await window.chromaAPI.upsertFunction(cleaned)
+
+            // update parent so UI reflects persisted state
+            onChange(cleaned)
+
+            // keep draft aligned with what we saved
+            setDraft(cleaned)
+        } catch (e: any) {
+            console.error(e)
+            setSaveError(e?.message ?? "Failed to save")
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    const handleCancel = () => {
+        setDraft(functionData)
+        setSaveError(null)
+    }
+
+    const statusChip = (() => {
+        if (isSaving) return <Chip label="Saving..." size="small" color="info" />
+        if (saveError) return <Chip label="Error" size="small" color="error" />
+        if (isDirty) return <Chip label="Unsaved" size="small" color="warning" />
+        return <Chip label="Saved" size="small" color="primary" />
+    })()
 
     return (
         <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
             <Stack spacing={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Stack direction="row" justifyContent="left" alignItems="center">
-                        <Typography variant="h6" paddingRight={"0.5em"}>Function:</Typography>
+                        <Typography variant="h6" paddingRight={"0.5em"}>
+                            Function:
+                        </Typography>
                         <Chip label={draft.function_id} size="small" />
                     </Stack>
 
-                    <Chip label={"Saved"} size="small" color="primary" />
+                    {statusChip}
                 </Stack>
 
                 <Divider />
 
-                {/* function_desc */}
+                {/* function_desc (embedded) */}
                 <TextField
                     label="function_desc"
                     value={draft.function_desc}
@@ -128,7 +179,6 @@ function FunctionInterface({ functionData, onChange }: Props) {
                         }}
                     />
                 </Box>
-
 
                 {/* regex_phrases */}
                 <Box>
@@ -204,39 +254,11 @@ function FunctionInterface({ functionData, onChange }: Props) {
 
                 {/* metadata */}
                 <Box sx={{ mt: 2 }}>
-                    <Stack
-                        direction="row"
-                        alignItems="center"
-                        spacing={1.5}
-                    >
-                        <Typography variant="subtitle1">
-                            Usage Count:
-                        </Typography>
-
-                        <Chip
-                            label={draft.metadata.usage_count}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                        />
+                    <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <Typography variant="subtitle1">Usage Count:</Typography>
+                        <Chip label={draft.metadata.usage_count} size="small" color="primary" variant="outlined" />
                     </Stack>
                 </Box>
-
-                <Stack direction="row" spacing={2} justifyContent="flex-start" sx={{ mt: 2 }}>
-                    <Button
-                        variant="contained"
-                        color="success"
-                    >
-                        Save
-                    </Button>
-
-                    <Button
-                        variant="outlined"
-                        color="warning"
-                    >
-                        Cancel
-                    </Button>
-                </Stack>
 
                 {/* response_phrase */}
                 <TextField
@@ -248,9 +270,29 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     minRows={2}
                 />
 
+                <Stack direction="row" spacing={2} justifyContent="flex-start" sx={{ mt: 2 }}>
+                    <Button
+                        variant="contained"
+                        color="success"
+                        onClick={handleSave}
+                        disabled={!isDirty || isSaving}
+                    >
+                        Save
+                    </Button>
+
+                    <Button variant="outlined" color="warning" onClick={handleCancel} disabled={!isDirty || isSaving}>
+                        Cancel
+                    </Button>
+
+                    {saveError && (
+                        <Typography variant="body2" color="error" sx={{ alignSelf: "center" }}>
+                            {saveError}
+                        </Typography>
+                    )}
+                </Stack>
             </Stack>
-        </Paper >
-    );
+        </Paper>
+    )
 }
 
-export default FunctionInterface;
+export default FunctionInterface

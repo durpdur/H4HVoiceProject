@@ -1,3 +1,4 @@
+import BotResponseColumn from "../BotResponseColumn/BotResponseColumn";
 import VoiceBubble from "../VoiceBubble/VoiceBubble";
 import { Box, Paper, Typography, Fade } from "@mui/material";
 
@@ -46,7 +47,7 @@ function Transcriber({ isRecording, onToggle, displayText }: TranscriberProps) {
                         letterSpacing: 1.2
                     }}
                 >
-                    {isRecording ? "Live Transcript" : "Last Input"}
+                    {isRecording ? "Live Transcript" : "Voice Input"}
                 </Typography>
 
                 <Box sx={{ mt: 1 }}>
@@ -75,6 +76,8 @@ function Transcriber({ isRecording, onToggle, displayText }: TranscriberProps) {
                     )}
                 </Box>
             </Paper>
+
+            <BotResponseColumn />
         </Box>
     );
 }

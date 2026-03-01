@@ -1,8 +1,7 @@
 import type { FunctionDescriptor } from './types/FunctionDescriptor'
 
 import { useState, useEffect, useRef } from 'react'
-import FunctionInterface from './components/FunctionInterface/FunctionInterface'
-import { Button, Stack } from '@mui/material'
+import { Stack } from '@mui/material'
 import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEncode";
 import Transcriber from './components/Transcriber/Transcriber'
 import FunctionInterfaceColumn from './components/FunctionInterfaceColumn/FunctionInterfaceColumn';
@@ -117,22 +116,6 @@ function App() {
     return () => { cancelled = true }
   }, [])
 
-  // Add mock data
-  const addKettle = async () => {
-    const fd: FunctionDescriptor = {
-      function_id: "kettle_on_001",
-      function_desc: "Turns on the smart kettle, optionally for a specified duration in minutes.",
-      regex_phrases: ["turn on (the )?kettle", "start (the )?kettle", "boil water"],
-      logic: "if (slots.duration) { device.kettle.turn_on({ duration: slots.duration }); } else { device.kettle.turn_on(); }",
-      response_phrase: "Kettle has been turned on",
-      slots: { duration: "(\\d+)\\s+minutes" },
-      metadata: { confidence_score: 0.95, usage_count: 0 },
-    }
-
-    await window.chromaAPI.upsertFunction(fd)
-    await refreshFunctions()
-  }
-
   const createFunction = async (fd: FunctionDescriptor) => {
     await window.chromaAPI.upsertFunction(fd)
     await refreshFunctions()
@@ -197,7 +180,6 @@ function App() {
           functions={functions}
           onChangeFunction={updateFunction}
           onCreateFunction={createFunction}
-          onAddKettle={addKettle}
           onRefresh={refreshFunctions}
         />
 

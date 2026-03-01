@@ -1,4 +1,5 @@
 import { ChromaClient, Collection } from "chromadb"
+import type { SearchResponse } from "../src/types/SearchResponse"
 
 export interface FunctionDescriptor {
     function_id: string
@@ -85,8 +86,9 @@ export async function listFunctions(): Promise<FunctionDescriptor[]> {
 export async function searchFunctions(
     text: string,
     nResults = 5,
-    distanceThreshold = 0.75
-) {
+    distanceThreshold = 1.2
+): Promise<SearchResponse> {
+
     const raw = await collection.query({
         queryTexts: [text],
         nResults,
@@ -100,10 +102,27 @@ export async function searchFunctions(
 
     const results = ids
         .map((id, i) => ({
-            fd: fromChroma(id, docs[i] ?? "", mds[i] ?? {}),
+            id,
+            doc: docs[i] ?? "",
+            md: mds[i] ?? {},
             distance: dists[i],
         }))
         .filter((r) => r.distance != null && r.distance <= distanceThreshold)
+        .map((r) => {
+            const distance = r.distance!
+
+            // Logistic confidence curve
+            const midpoint = 0.85   // distance where confidence ≈ 0.5
+            const sharpness = 6     // higher = steeper drop
+            const confidence =
+                1 / (1 + Math.exp(sharpness * (distance - midpoint)))
+
+            return {
+                fd: fromChroma(r.id, r.doc, r.md),
+                distance,
+                confidence,
+            }
+        })
 
     return { matched: results.length > 0, results }
 }
