@@ -130,6 +130,18 @@ function App() {
     }
   }
 
+  const handleDelete = async (functionId: string) => {
+    await window.chromaAPI.deleteFunction(functionId)
+
+    // Keep local UI in sync right away
+    setFunctions((prev) => prev.filter((f) => f.function_id !== functionId))
+
+    // Optional: if the deleted one is currently loaded as a generated candidate, clear it
+    setGeneratedFunction((prev) =>
+      prev?.descriptor.function_id === functionId ? null : prev
+    )
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -219,6 +231,7 @@ function App() {
           onRefresh={refreshFunctions}
           generatedFunction={generatedFunction}
           setGeneratedFunction={setGeneratedFunction}
+          onDeleteFunction={handleDelete}
         />
 
       </Stack>

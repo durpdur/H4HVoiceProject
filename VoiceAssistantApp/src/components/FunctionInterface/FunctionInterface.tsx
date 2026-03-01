@@ -19,15 +19,29 @@ import DeleteIcon from "@mui/icons-material/Delete"
 
 type Props = {
     functionData: FunctionDescriptor
-    onChange: (updated: FunctionDescriptor) => void // called after SAVE (and on cancel reset if you want)
+    onChange: (updated: FunctionDescriptor) => void
+    onDelete: () => Promise<void> | void
 }
 
-function FunctionInterface({ functionData, onChange }: Props) {
+function FunctionInterface({ functionData, onChange, onDelete }: Props) {
     const [draft, setDraft] = useState<FunctionDescriptor>(functionData)
     const [isSaving, setIsSaving] = useState(false)
     const [saveError, setSaveError] = useState<string | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     const slots: Record<string, string> = draft.slots ?? {}
+
+    const handleDelete = async () => {
+        setIsDeleting(true)
+        setSaveError(null)
+        try {
+            await onDelete()
+        } catch (e: any) {
+            console.error(e)
+            setSaveError(e?.message ?? "Failed to delete")
+            setIsDeleting(false) // keep card visible if delete failed
+        }
+    }
 
     // Keep draft in sync if parent changes (e.g. after refresh/listFunctions)
     useEffect(() => {
@@ -270,18 +284,30 @@ function FunctionInterface({ functionData, onChange }: Props) {
                     minRows={2}
                 />
 
-                <Stack direction="row" spacing={2} justifyContent="flex-start" sx={{ mt: 2 }}>
-                    <Button
-                        variant="contained"
-                        color="success"
-                        onClick={handleSave}
-                        disabled={!isDirty || isSaving}
-                    >
-                        Save
-                    </Button>
+                <Stack direction="row" justifyContent="space-between" sx={{ mt: 2 }}>
+                    <Stack direction="row" spacing={2} justifyContent="flex-start">
+                        <Button
+                            variant="contained"
+                            color="success"
+                            onClick={handleSave}
+                            disabled={!isDirty || isSaving}
+                        >
+                            Save
+                        </Button>
+                        <Button variant="outlined" color="warning" onClick={handleCancel} disabled={!isDirty || isSaving}>
+                            Cancel
+                        </Button>
+                    </Stack>
 
-                    <Button variant="outlined" color="warning" onClick={handleCancel} disabled={!isDirty || isSaving}>
-                        Cancel
+                    <Button
+                        variant="outlined"
+                        color="error"
+                        onClick={handleDelete}
+                        disabled={isSaving || isDeleting}
+                        startIcon={<DeleteIcon />}
+                        size="small"
+                    >
+                        Delete
                     </Button>
 
                     {saveError && (

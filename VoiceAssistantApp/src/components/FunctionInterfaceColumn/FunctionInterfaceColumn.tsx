@@ -12,6 +12,7 @@ type FunctionInterfaceColumnProps = {
     setGeneratedFunction: React.Dispatch<
         React.SetStateAction<GenerateResult | null>
     >
+    onDeleteFunction: (functionId: string) => Promise<void> | void
 }
 
 function FunctionInterfaceColumn({
@@ -19,7 +20,8 @@ function FunctionInterfaceColumn({
     onChangeFunction,
     onCreateFunction,
     generatedFunction,
-    setGeneratedFunction
+    setGeneratedFunction,
+    onDeleteFunction,
 }: FunctionInterfaceColumnProps) {
     return (
         <div style={{ flex: 1, overflowY: "auto", paddingRight: 8, paddingBottom: 30 }}>
@@ -34,6 +36,7 @@ function FunctionInterfaceColumn({
                     key={func.function_id}
                     functionData={func}
                     onChange={(updated) => onChangeFunction(idx, updated)}
+                    onDelete={() => onDeleteFunction(func.function_id)}
                 />
             ))}
         </div>
