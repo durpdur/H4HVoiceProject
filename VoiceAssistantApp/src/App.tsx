@@ -1,12 +1,13 @@
 import type { FunctionDescriptor } from './types/FunctionDescriptor'
 
-import { useState, useEffect, useRef } from 'react'
-import { Stack } from '@mui/material'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Box, Stack } from '@mui/material'
 import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEncode";
 import Transcriber from './components/Transcriber/Transcriber'
 import FunctionInterfaceColumn from './components/FunctionInterfaceColumn/FunctionInterfaceColumn';
 import { SearchResponse } from './types/SearchResponse';
 import { GenerateResult } from './types/GenerateResult';
+import FunctionTimelineSlim from './components/FunctionTimeline/FunctionWithTimelineSlim';
 
 
 function App() {
@@ -18,6 +19,18 @@ function App() {
   const [generatedFunction, setGeneratedFunction] = useState<GenerateResult | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [searchMs, setSearchMs] = useState<number | null>(null)
+
+  const rightScrollRef = useRef<HTMLDivElement | null>(null);
+  const [activeId, setActiveId] = useState<string | undefined>(undefined);
+
+  const safeDomId = (functionId: string) => `fn-${encodeURIComponent(functionId)}`;
+
+  const jumpTo = (functionId: string) => {
+    setActiveId(functionId);
+    const el = document.getElementById(safeDomId(functionId));
+    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -206,12 +219,12 @@ function App() {
 
   return (
     <div style={{ height: "100vh", padding: 16 }}>
-      <Stack direction="row" spacing={2} sx={{ height: "100%" }}>
+      <Stack direction="row" spacing={6} sx={{ height: "100%" }}>
         {/* LEFT — Voice + Button */}
         <Stack
           spacing={2}
           sx={{
-            width: 300,
+            width: "40%",
             flexShrink: 0,
             alignItems: "center",
           }}
@@ -230,17 +243,63 @@ function App() {
           />
         </Stack>
 
-        {/* RIGHT — Functions (Scrollable) */}
-        <FunctionInterfaceColumn
-          functions={functions}
-          onChangeFunction={updateFunction}
-          onCreateFunction={createFunction}
-          onRefresh={refreshFunctions}
-          generatedFunction={generatedFunction}
-          setGeneratedFunction={setGeneratedFunction}
-          onDeleteFunction={handleDelete}
-        />
+        {/* RIGHT — Timeline + Functions */}
+        <Box
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            height: "100%",
+            display: "grid",
+            gridTemplateColumns: "5em 1fr",
+            gap: 2,
+            borderRadius: 3,
+            overflow: "hidden",
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          {/* Slim timeline panel (sticky feel) */}
+          <Box
+            sx={{
+              height: "100%",
+              borderRight: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.default",
+            }}
+          >
+            <FunctionTimelineSlim
+              functions={functions}
+              activeId={activeId}
+              onSelect={jumpTo}
+            />
+          </Box>
 
+          {/* Scrollable editor column */}
+          <Box
+            ref={rightScrollRef}
+            sx={{
+              height: "100%",
+              overflowY: "auto",
+              p: 2,
+              minWidth: 0,
+            }}
+          >
+            <FunctionInterfaceColumn
+              functions={functions}
+              onChangeFunction={updateFunction}
+              onCreateFunction={createFunction}
+              onRefresh={refreshFunctions}
+              generatedFunction={generatedFunction}
+              setGeneratedFunction={setGeneratedFunction}
+              onDeleteFunction={handleDelete}
+
+              // NEW: pass helpers so the column can add ids to each card root
+              getCardId={safeDomId}
+              onVisibleFunctionChange={setActiveId} // optional, for scroll-sync
+            />
+          </Box>
+        </Box>
       </Stack>
     </div>
   )

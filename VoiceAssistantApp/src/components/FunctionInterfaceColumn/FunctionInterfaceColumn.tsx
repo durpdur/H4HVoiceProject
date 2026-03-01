@@ -13,6 +13,8 @@ type FunctionInterfaceColumnProps = {
         React.SetStateAction<GenerateResult | null>
     >
     onDeleteFunction: (functionId: string) => Promise<void> | void
+    getCardId?: (functionId: string) => string;
+    onVisibleFunctionChange?: (functionId: string) => void;
 }
 
 function FunctionInterfaceColumn({
@@ -22,6 +24,7 @@ function FunctionInterfaceColumn({
     generatedFunction,
     setGeneratedFunction,
     onDeleteFunction,
+    getCardId
 }: FunctionInterfaceColumnProps) {
     return (
         <div style={{ flex: 1, overflowY: "auto", paddingRight: 8, paddingBottom: 30 }}>
@@ -32,12 +35,18 @@ function FunctionInterfaceColumn({
             />
 
             {functions.map((func, idx) => (
-                <FunctionInterface
+                <div
                     key={func.function_id}
-                    functionData={func}
-                    onChange={(updated) => onChangeFunction(idx, updated)}
-                    onDelete={() => onDeleteFunction(func.function_id)}
-                />
+                    id={getCardId?.(func.function_id)}     // ✅ this is what scroll targets
+                    style={{ scrollMarginTop: 16 }}        // ✅ avoids getting tucked under headers
+                >
+                    <FunctionInterface
+                        key={func.function_id}
+                        functionData={func}
+                        onChange={(updated) => onChangeFunction(idx, updated)}
+                        onDelete={() => onDeleteFunction(func.function_id)}
+                    />
+                </div>
             ))}
         </div>
     )
