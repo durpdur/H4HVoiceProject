@@ -18,6 +18,7 @@ import fs from "node:fs";
 import os from "node:os";
 import { spawn, ChildProcessWithoutNullStreams } from "node:child_process";
 import crypto from "node:crypto";
+import 'dotenv/config'
 
 
 const require = createRequire(import.meta.url)
@@ -203,19 +204,27 @@ ipcMain.handle('chroma:searchFunctions', async (_e, text: string, nResults?: num
   return searchFunctions(text, nResults, distanceThreshold)
 })
 
-ipcMain.handle('chroma:generateAndStore', async (_e, text: string, nResults?: number, distanceThreshold?: number) => {
+
+ipcMain.handle('chroma:generateCandidate', async (_e, text: string, nResults?: number, distanceThreshold?: number) => {
   const queryResult = await searchFunctions(text, nResults, distanceThreshold)
-  if (queryResult.matched) {
-    return { generated: false, ...queryResult }
+
+  if (queryResult.matched && queryResult.results.length > 0) {
+    const bestMatch = queryResult.results[0].fd
+
+    return {
+      generated: false,
+      descriptor: bestMatch,
+    }
   }
 
   const descriptor: FunctionDescriptor = await generateFunction(text)
 
-  // ✅ store the full descriptor (desc embedded; rest metadata)
-  await upsertFunction(descriptor)
+  console.log(`[main] Generated candidate "${descriptor.function_id}" (not saved)`)
 
-  console.log(`[main] Generated and stored new function "${descriptor.function_id}"`)
-  return { generated: true, descriptor }
+  return {
+    generated: true,
+    descriptor,
+  }
 })
 
 // ── App Lifecycle ──────────────────────────────────────────────────────

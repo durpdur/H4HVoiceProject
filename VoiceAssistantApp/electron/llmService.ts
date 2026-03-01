@@ -20,27 +20,20 @@ function getModel() {
 export async function generateFunction(
     userQuery: string
 ): Promise<FunctionDescriptor> {
-    const prompt = `You are a smart-home voice-command engineer.
-
-Given the user's natural-language command below, produce a JSON object that
-follows this TypeScript interface EXACTLY — no extra keys, no markdown fences,
-just raw JSON:
-
-interface FunctionDescriptor {
-    function_id: string        // snake_case unique id, e.g. "lock_door_001"
-    function_desc: string      // one-sentence description of what the command does
-    regex_phrases: string[]    // 3 regex patterns that would match this command
-    logic: string              // pseudo-JS that executes the action
-    slots?: Record<string, string>  // named capture groups if the command has parameters
-    metadata: {
-        confidence_score: number  // your confidence 0-1
-        usage_count: number       // start at 0
-    }
+    const prompt = `interface FunctionDescriptor {
+    function_id: string; // snake_case, e.g., "set_temp_001"
+    function_desc: string; // Mirror user's vocabulary
+    regex_phrases: string[]; // 3 valid regex patterns; double-escape backslashes
+    logic: string; // Pseudo-python
+    response_phrase: string; // Natural voice response
+    slots?: Record<string, string>; // Extracted entities from userQuery
+    metadata: { confidence_score: number; usage_count: 0; }
 }
 
 User command: "${userQuery}"
 
-Respond with ONLY the JSON object, nothing else.`
+Return ONLY the raw JSON object. Do not include markdown formatting, backticks, or any preamble. 
+Ensure the JSON is valid and parsable.`
 
     const result = await getModel().generateContent(prompt)
     const text = result.response.text().trim()

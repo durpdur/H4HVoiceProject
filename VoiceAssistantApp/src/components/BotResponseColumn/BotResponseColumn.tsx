@@ -2,13 +2,20 @@ import { Box, Paper, Typography } from "@mui/material";
 import { SearchResponse } from "../../types/SearchResponse";
 import BotResponseFunction from "./BotResponseFunction";
 import BotResponseResponsePhrase from "./BotResponsePhrase";
+import { GenerateResult } from "../../types/GenerateResult";
 
 type BotResponseColumnProps = {
     isThinking: boolean;
     searchResponse: SearchResponse | null;
+    generatedFunction: GenerateResult | null;
+    setGeneratedFunction: React.Dispatch<
+        React.SetStateAction<GenerateResult | null>
+    >;
+    isGenerating: boolean;
+    onGenerate: () => Promise<void>
 };
 
-function BotResponseColumn({ isThinking = false, searchResponse }: BotResponseColumnProps) {
+function BotResponseColumn({ isThinking = false, searchResponse, generatedFunction, setGeneratedFunction, isGenerating, onGenerate }: BotResponseColumnProps) {
     return (
         <Paper
             elevation={0}
@@ -43,7 +50,13 @@ function BotResponseColumn({ isThinking = false, searchResponse }: BotResponseCo
             </Typography>
 
             <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2, flexGrow: 1 }}>
-                <BotResponseFunction searchResponse={searchResponse} />
+                <BotResponseFunction
+                    searchResponse={searchResponse}
+                    generatedFunction={generatedFunction}
+                    setGeneratedFunction={setGeneratedFunction}
+                    isGenerating={isGenerating}
+                    onGenerate={onGenerate}
+                />
                 <BotResponseResponsePhrase
                     isThinking={isThinking}
                     responseText={searchResponse?.results[0]?.fd?.response_phrase ?? ""}

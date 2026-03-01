@@ -54,13 +54,7 @@ contextBridge.exposeInMainWorld('chromaAPI', {
     results: Array<{ fd: FunctionDescriptor; distance: number }>
   }> => ipcRenderer.invoke('chroma:searchFunctions', text, nResults, distanceThreshold),
 
-  // “Generate if missing” flow
-  generateAndStore: (
-    text: string,
-    nResults?: number,
-    distanceThreshold?: number
-  ): Promise<
-    | { generated: false; matched: true; results: Array<{ fd: FunctionDescriptor; distance: number }> }
-    | { generated: true; descriptor: FunctionDescriptor }
-  > => ipcRenderer.invoke('chroma:generateAndStore', text, nResults, distanceThreshold),
+  // Generate a new FunctionDescriptor
+  generateCandidate: (userQuery: string): Promise<{ generated: boolean; descriptor: FunctionDescriptor }> =>
+    ipcRenderer.invoke('chroma:generateCandidate', userQuery),
 })

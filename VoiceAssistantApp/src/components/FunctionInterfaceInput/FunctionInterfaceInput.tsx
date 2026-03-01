@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { FunctionDescriptor } from "../../types/FunctionDescriptor"
 import {
     Box,
@@ -14,9 +14,14 @@ import {
 } from "@mui/material"
 import AddIcon from "@mui/icons-material/Add"
 import DeleteIcon from "@mui/icons-material/Delete"
+import { GenerateResult } from "../../types/GenerateResult"
 
 type Props = {
     onCreate: (fd: FunctionDescriptor) => Promise<void> | void
+    generatedFunction: GenerateResult | null
+    setGeneratedFunction: React.Dispatch<
+        React.SetStateAction<GenerateResult | null>
+    >
 }
 
 const emptyFunction = (): FunctionDescriptor => ({
@@ -29,7 +34,24 @@ const emptyFunction = (): FunctionDescriptor => ({
     metadata: { confidence_score: 0.9, usage_count: 0 },
 })
 
-export default function FunctionInterfaceInput({ onCreate }: Props) {
+// Normalizes object
+const normalizeDescriptor = (fd: FunctionDescriptor): FunctionDescriptor => ({
+    ...emptyFunction(),
+    ...fd,
+    regex_phrases:
+        fd.regex_phrases && fd.regex_phrases.length ? fd.regex_phrases : [""],
+    slots: fd.slots ?? {},
+})
+
+export default function FunctionInterfaceInput({ onCreate, generatedFunction, setGeneratedFunction }: Props) {
+    // Hydrates component when generatedFunction has something
+    useEffect(() => {
+        if (!generatedFunction) return
+
+        // Autofill the form from the generated descriptor
+        setDraft(normalizeDescriptor(generatedFunction.descriptor))
+    }, [generatedFunction])
+
     const [draft, setDraft] = useState<FunctionDescriptor>(emptyFunction())
     const slots: Record<string, string> = draft.slots ?? {}
 
@@ -86,9 +108,13 @@ export default function FunctionInterfaceInput({ onCreate }: Props) {
         }
         await onCreate(cleaned)
         setDraft(emptyFunction())
+        setGeneratedFunction(null)
     }
 
-    const handleCancel = () => setDraft(emptyFunction())
+    const handleCancel = () => {
+        setDraft(emptyFunction())
+        setGeneratedFunction(null)
+    }
 
     return (
         <Paper

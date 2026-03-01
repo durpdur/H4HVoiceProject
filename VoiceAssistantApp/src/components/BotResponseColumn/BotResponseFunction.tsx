@@ -1,11 +1,19 @@
-import { Box, Chip, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Stack, Tooltip, Typography } from "@mui/material";
 import { SearchResponse } from "../../types/SearchResponse";
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { GenerateResult } from "../../types/GenerateResult";
 
 type BotResponseFunctionProps = {
     searchResponse: SearchResponse | null;
+    generatedFunction: GenerateResult | null;
+    setGeneratedFunction: React.Dispatch<
+        React.SetStateAction<GenerateResult | null>
+    >;
+    isGenerating?: boolean;
+    onGenerate: () => Promise<void>
 };
 
-function BotResponseFunction({ searchResponse }: BotResponseFunctionProps) {
+function BotResponseFunction({ searchResponse, generatedFunction, setGeneratedFunction, isGenerating, onGenerate }: BotResponseFunctionProps) {
     const results = searchResponse?.results ?? [];
     const matched = searchResponse?.matched ?? false;
 
@@ -28,9 +36,35 @@ function BotResponseFunction({ searchResponse }: BotResponseFunctionProps) {
                 <Typography variant="subtitle2" sx={{ color: "text.secondary", mb: 1 }}>
                     Function Match:
                 </Typography>
-                <Typography variant="body2" sx={{ color: "grey.600", fontStyle: "italic" }}>
-                    {matched ? "Matched, but no results returned." : "No match found."}
-                </Typography>
+                <Stack direction="row" alignItems="center" spacing={1}>
+                    <Typography
+                        variant="body2"
+                        sx={{ color: "grey.600", fontStyle: "italic", flexGrow: 1 }}
+                    >
+                        {matched
+                            ? "Matched, but no results returned."
+                            : "No match found."}
+                    </Typography>
+
+                    <Tooltip title="Generate">
+                        <Button
+                            size="small"
+                            variant="contained"
+                            endIcon={<AutoAwesomeIcon fontSize="small" />}
+                            onClick={onGenerate}
+                            disabled={isGenerating}
+                            sx={{
+                                borderRadius: "999px",
+                                textTransform: "none",
+                                px: 2,
+                                minHeight: 28,
+                                fontWeight: 500,
+                            }}
+                        >
+                            Generate
+                        </Button>
+                    </Tooltip>
+                </Stack>
             </Box>
         );
     }

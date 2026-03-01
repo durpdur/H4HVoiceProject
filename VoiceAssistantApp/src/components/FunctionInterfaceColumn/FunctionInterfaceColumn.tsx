@@ -1,4 +1,5 @@
 import type { FunctionDescriptor } from "../../types/FunctionDescriptor"
+import { GenerateResult } from "../../types/GenerateResult"
 import FunctionInterface from "../FunctionInterface/FunctionInterface"
 import FunctionInterfaceInput from "../FunctionInterfaceInput/FunctionInterfaceInput"
 
@@ -7,16 +8,26 @@ type FunctionInterfaceColumnProps = {
     onChangeFunction: (index: number, updated: FunctionDescriptor) => void
     onCreateFunction: (fd: FunctionDescriptor) => Promise<void> | void
     onRefresh: () => Promise<void> | void
+    generatedFunction: GenerateResult | null
+    setGeneratedFunction: React.Dispatch<
+        React.SetStateAction<GenerateResult | null>
+    >
 }
 
 function FunctionInterfaceColumn({
     functions,
     onChangeFunction,
-    onCreateFunction
+    onCreateFunction,
+    generatedFunction,
+    setGeneratedFunction
 }: FunctionInterfaceColumnProps) {
     return (
         <div style={{ flex: 1, overflowY: "auto", paddingRight: 8, paddingBottom: 30 }}>
-            <FunctionInterfaceInput onCreate={onCreateFunction} />
+            <FunctionInterfaceInput
+                onCreate={onCreateFunction}
+                generatedFunction={generatedFunction}
+                setGeneratedFunction={setGeneratedFunction}
+            />
 
             {functions.map((func, idx) => (
                 <FunctionInterface

@@ -7,7 +7,7 @@ def send(obj):
 
 def main():
   # Load once
-  model_size = "base"
+  model_size = "small"
   language_setting = "en"
   
   model = WhisperModel(model_size, device="cpu", compute_type="int8")

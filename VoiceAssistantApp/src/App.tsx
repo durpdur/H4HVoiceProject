@@ -6,6 +6,7 @@ import { encodeWav16kMono, floatTo16BitPCM, resampleTo16k } from "./audio/wavEnc
 import Transcriber from './components/Transcriber/Transcriber'
 import FunctionInterfaceColumn from './components/FunctionInterfaceColumn/FunctionInterfaceColumn';
 import { SearchResponse } from './types/SearchResponse';
+import { GenerateResult } from './types/GenerateResult';
 
 
 function App() {
@@ -14,6 +15,8 @@ function App() {
   const [displayText, setDisplayText] = useState("");
   const [searchResponse, setSearchResponse] = useState<SearchResponse | null>(null);
   const [isThinking, setIsThinking] = useState<boolean>(false);
+  const [generatedFunction, setGeneratedFunction] = useState<GenerateResult | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const workletNodeRef = useRef<AudioWorkletNode | null>(null);
@@ -116,6 +119,17 @@ function App() {
     setFunctions(stored)
   }
 
+  async function handleGenerate() {
+    setIsGenerating(true)
+    try {
+      const res = await window.chromaAPI.generateCandidate(displayText)
+      // res is { generated: boolean, descriptor: FunctionDescriptor }
+      setGeneratedFunction(res)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -190,6 +204,10 @@ function App() {
             displayText={displayText}
             searchResponse={searchResponse}
             isThinking={isThinking}
+            generatedFunction={generatedFunction}
+            setGeneratedFunction={setGeneratedFunction}
+            isGenerating={isGenerating}
+            onGenerate={handleGenerate}
           />
         </Stack>
 
@@ -199,6 +217,8 @@ function App() {
           onChangeFunction={updateFunction}
           onCreateFunction={createFunction}
           onRefresh={refreshFunctions}
+          generatedFunction={generatedFunction}
+          setGeneratedFunction={setGeneratedFunction}
         />
 
       </Stack>

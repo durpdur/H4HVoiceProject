@@ -21,10 +21,8 @@ declare global {
                 results: Array<{ fd: FunctionDescriptor; distance: number }>
             }>
 
-            generateAndStore(
-                text: string,
-                nResults?: number,
-                distanceThreshold?: number
+            generateCandidate(
+                userQuery: string
             ): Promise<any>
         }
     }

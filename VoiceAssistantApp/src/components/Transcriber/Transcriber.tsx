@@ -1,3 +1,4 @@
+import { GenerateResult } from "../../types/GenerateResult";
 import { SearchResponse } from "../../types/SearchResponse";
 import BotResponseColumn from "../BotResponseColumn/BotResponseColumn";
 import VoiceBubble from "../VoiceBubble/VoiceBubble";
@@ -9,9 +10,15 @@ type TranscriberProps = {
     displayText: string;
     searchResponse: SearchResponse | null;
     isThinking: boolean;
+    generatedFunction: GenerateResult | null
+    setGeneratedFunction: React.Dispatch<
+        React.SetStateAction<GenerateResult | null>
+    >;
+    isGenerating: boolean;
+    onGenerate: () => Promise<void>
 };
 
-function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThinking }: TranscriberProps) {
+function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThinking, generatedFunction, setGeneratedFunction, isGenerating, onGenerate }: TranscriberProps) {
     return (
         <Box
             sx={{
@@ -85,6 +92,10 @@ function Transcriber({ isRecording, onToggle, displayText, searchResponse, isThi
             <BotResponseColumn
                 isThinking={isThinking}
                 searchResponse={searchResponse}
+                generatedFunction={generatedFunction}
+                setGeneratedFunction={setGeneratedFunction}
+                isGenerating={isGenerating}
+                onGenerate={onGenerate}
             />
         </Box>
     );
