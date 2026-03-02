@@ -227,6 +227,7 @@ function App() {
             width: "40%",
             flexShrink: 0,
             alignItems: "center",
+            pt: 3,
           }}
         >
           <Transcriber

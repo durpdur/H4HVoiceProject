@@ -22,7 +22,7 @@ export async function generateFunction(
 ): Promise<FunctionDescriptor> {
     const prompt = `interface FunctionDescriptor {
     function_id: string; // snake_case, e.g., "set_temp_001"
-    function_desc: string; // Mirror user's vocabulary
+    function_desc: string; // Short one sentence description of function, use as many repeated words as user command as possible
     regex_phrases: string[]; // 3 valid regex patterns; double-escape backslashes
     logic: string; // Pseudo-python
     response_phrase: string; // Natural voice response

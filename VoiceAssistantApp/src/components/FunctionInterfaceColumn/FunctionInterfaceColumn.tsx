@@ -27,7 +27,7 @@ function FunctionInterfaceColumn({
     getCardId
 }: FunctionInterfaceColumnProps) {
     return (
-        <div style={{ flex: 1, overflowY: "auto", paddingRight: 8, paddingBottom: 30 }}>
+        <div style={{ flex: 1, overflowY: "auto", paddingRight: 8 }}>
             <FunctionInterfaceInput
                 onCreate={onCreateFunction}
                 generatedFunction={generatedFunction}
