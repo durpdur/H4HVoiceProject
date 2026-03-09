@@ -1,6 +1,5 @@
 import dotenv from 'dotenv'
 import { app, BrowserWindow, ipcMain } from 'electron'
-import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import {
@@ -21,7 +20,6 @@ import crypto from "node:crypto";
 import 'dotenv/config'
 
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Load .env from the project root (one level up from dist-electron/)
